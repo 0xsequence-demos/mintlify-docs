@@ -10,9 +10,10 @@ The tools will enable you to perform:
 
 1. [Minting](/guides/custom-marketplace#1-minting): Minting of tokens to your wallet from the Sequence Builder
 2. [Wallet Authentication](/guides/custom-marketplace#2-wallet-authentication): Use of Sequence Kit to authenticate a user
-3. [Displaying collections](/guides/custom-marketplace#3-displaying-collections): ((((Querying of token balances using the Indexer))))
-4. [Listings and Offers](/guides/custom-marketplace#4-listings-and-offers): (((Allow users to either use a Sequence Wallet or an EOA)))
-5. [(Optional) Inventory](/guides/custom-marketplace#5-inventory-optional): Add a inventory for your users
+3. [Core Files for Development](/guides/custom-marketplace#3-core-files-for-development): Create the necessary files before proceeding. These files are essential for maintaining structure and improving the development process.
+4. [Displaying collections](/guides/custom-marketplace#4-displaying-collections): Retrieve and display the marketplace's available collections.
+5. [Listings and Offers](/guides/custom-marketplace#5-listings-and-offers): Enable users to list tokens for sale or make offers
+6. [(Optional) Inventory](/guides/custom-marketplace#6-inventory-optional): Add a inventory for your users
 
 <Note>
 See an example [simplified marketplace dapp](https://simple-marketplace-boilerplate.pages.dev/) that enables users to mint collectibles, sell the collectibles with the Sequence Marketplace Protocol, and make purchases with USDC on `base-sepolia` by getting a top order from the Marketplace.
@@ -129,7 +130,114 @@ Congratulations on making it this far! You can now run pnpm dev to test your aut
   Be sure to include a `.env` file in the root of your project to include client secrets
 </Warning>
 
-## 3. Displaying collections
+## 3. Core Files for Development
+
+To continue with the next steps follow these instructions to create essential files required for development.
+
+* Create a file named getChain.ts inside the src/app/utils directory and paste the following code snippet. This utility will assist in the integration of our listings page.
+
+```ts
+import { networks } from '@0xsequence/network';
+
+export type ChainNameOrId = string | number;
+
+export const getChain = (nameOrId: ChainNameOrId) => {
+  for (const network of Object.values(networks)) {
+    if (
+      network.name === String(nameOrId).toLowerCase() ||
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
+      network.chainId === Number(nameOrId)
+    ) {
+      return network;
+    }
+  }
+};
+
+export const getChainName = (nameOrId: ChainNameOrId) =>
+  getChain(nameOrId)?.name;
+export const getChainId = (nameOrId: ChainNameOrId) =>
+  getChain(nameOrId)?.chainId;
+export const getPresentableChainName = (nameOrId: ChainNameOrId) =>
+  getChain(nameOrId)?.title;
+
+export const getCurrencyIconUrl = (chainId: number): string => {
+  return `https://assets.sequence.info/images/networks/medium/${chainId}.webp`;
+};
+```
+
+* Create a file named types.ts inside the src/app/utils directory and paste the following code snippet. These types will help maintain strong typing in the code.
+
+```ts
+import { Order, OrderbookKind } from "@0xsequence/marketplace-sdk";
+import { Hash, Hex } from "viem";
+
+export type ModalCallbacks = {
+    onSuccess?: ({ hash, orderId }: { hash?: Hash; orderId?: string }) => void;
+    onError?: (error: Error) => void;
+};
+
+export type ShowBuyModalArgs = {
+    chainId: string;
+    collectionAddress: Hex;
+    tokenId: string;
+    order: Order;
+};
+
+export type OpenCreateListingModalArgs = {
+    collectionAddress: Hex;
+    chainId: string;
+    collectibleId: string;
+    orderbookKind?: OrderbookKind;
+    callbacks?: ModalCallbacks;
+};
+
+export type ShowCreateListingModalArgs = Exclude<OpenCreateListingModalArgs, "callbacks">;
+
+export type OpenMakeOfferModalArgs = {
+    collectionAddress: Hex;
+    chainId: string;
+    collectibleId: string;
+    orderbookKind?: OrderbookKind;
+    callbacks?: ModalCallbacks;
+};
+
+export type ShowMakeOfferModalArgs = Exclude<OpenMakeOfferModalArgs, "callbacks">;
+
+export type OpenSellModalArgs = {
+    collectionAddress: Hex;
+    chainId: string;
+    tokenId: string;
+    order: Order;
+    callbacks?: ModalCallbacks;
+};
+
+export type ShowSellModalArgs = Exclude<OpenSellModalArgs, "callbacks">;
+```
+
+* Create a file named Button.tsx inside the src/app/components directory and paste the following code snippet. This Button component ensures the buttons are displayed clearly in this guide.
+
+```ts
+export const Button = ({
+  onClick,
+  children,
+}: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+  <button
+    onClick={onClick}
+    style={{
+      background: "transparent",
+      borderRadius: "12px",
+      fontSize: "16px",
+      border: "solid 1px #000",
+      padding: "6px",
+      cursor: "pointer",
+    }}
+  >
+    {children}
+  </button>
+);
+```
+
+## 4. Displaying collections
 
 To display the marketplace collections we need to create a folder named 'Collections' inside the 'src/app/components' directory. Within this folder, we will create two files: [index.tsx](https://gist.github.com/RichardIrala/79239f44c86e01fe465092ab765ee9fd#file-index-collections-tsx) and [Collection.tsx](https://gist.github.com/RichardIrala/79239f44c86e01fe465092ab765ee9fd#file-collection-tsx).
 
@@ -167,7 +275,7 @@ const LandingPage = ({ collections }: LandingPageProps) => {
 export default LandingPage;
 ```
 
-## 4. Listings and Offers
+## 5. Listings and Offers
 
 This section is for integrating the listings and offers from our marketplace into our UI.
 
@@ -222,7 +330,7 @@ export default CollectionBuyPage;
 
 You have successfully added the items to your new page, and they should now be visible in the UI. To view them, run pnpm dev. From the landing page, select any of your collections to be redirected to the new items page. Ensure that everything functions as expected by testing the listing, purchasing, offer-making, and offer-accepting processes for an NFT.
 
-## 5. Inventory (Optional)
+## 6. Inventory (Optional)
 
 To access the user's inventory, you can refer to the following documentation: [Sequence Inventory Modal](https://docs.sequence.xyz/solutions/wallets/sequence-kit/quickstart_examples/inventory). Everything is set up, and you only need to invoke the inventory modal.
 
