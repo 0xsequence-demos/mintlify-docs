@@ -38,57 +38,104 @@ Next, a configuration variable for Marketplace SDK will need to be created. In t
 #### config.ts
 
 <CodeGroup>
-
-```ts nextjs
-import type { SdkConfig } from '@0xsequence/marketplace-sdk';
-
-export function getConfig(host: string) {
-  const appleClientId = process.env.NEXT_PUBLIC_APPLE_CLIENT_ID;
-
-  const embedded = process.env.NEXT_PUBLIC_WAAS_CONFIG_KEY
-    ? ({
-        waasConfigKey: process.env.NEXT_PUBLIC_WAAS_CONFIG_KEY,
-        googleClientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-        appleClientId,
-        appleRedirectURI: appleClientId ? host : '',
-      } satisfies NonNullable<SdkConfig['wallet']>['embedded'])
-    : undefined;
-
-  const config = {
-    projectId: process.env.NEXT_PUBLIC_SEQUENCE_PROJECT_ID!,
-    projectAccessKey: process.env.NEXT_PUBLIC_SEQUENCE_ACCESS_KEY!,
-    wallet: {
-      walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID,
-      embedded,
-    },
-  } satisfies SdkConfig;
-  return config;
-}
-```
 ```ts vite
 import type { SdkConfig } from '@0xsequence/marketplace-sdk';
 
-export function getConfig(host: string) {
-  const appleClientId = import.meta.env.VITE_APPLE_CLIENT_ID;
+const projectAccessKey = import.meta.env.VITE_PROJECT_ACCESS_KEY;
+const projectId = import.meta.env.VITE_PROJECT_ID!;
+const waasConfigKey = import.meta.env.VITE_WAAS_CONFIG_KEY;
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const appleClientId = import.meta.env.VITE_APPLE_CLIENT_ID;
+const appleRedirectURI = window.location.origin + window.location.pathname;
+const walletConnectId = import.meta.env.VITE_WALLET_CONNECT_ID;
 
-  const embedded = import.meta.env.VITE_WAAS_CONFIG_KEY
+export function getConfig() {
+  const embedded = waasConfigKey
     ? ({
-        waasConfigKey: import.meta.env.VITE_WAAS_CONFIG_KEY,
-        googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        waasConfigKey,
+        googleClientId,
+        appleClientId,
+        appleRedirectURI,
+      } satisfies NonNullable<SdkConfig["wallet"]>["embedded"])
+    : undefined;
+
+  const config = {
+    projectId,
+    projectAccessKey,
+    wallet: {
+      walletConnectProjectId: walletConnectId,
+      embedded,
+    },
+  } satisfies SdkConfig;
+
+  return config;
+}
+```
+
+```ts nextjs server side rendering
+import type { SdkConfig } from '@0xsequence/marketplace-sdk';
+
+const projectAccessKey = process.env.NEXT_PUBLIC_PROJECT_ACCESS_KEY!;
+const projectId = process.env.NEXT_PUBLIC_PROJECT_ID!;
+const waasConfigKey = process.env.NEXT_PUBLIC_WAAS_CONFIG_KEY!;
+const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+const appleClientId = process.env.NEXT_PUBLIC_APPLE_CLIENT_ID;
+const walletConnectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_ID;
+
+export function getConfig(host: string) {
+  const embedded = waasConfigKey
+    ? ({
+        waasConfigKey,
+        googleClientId,
         appleClientId,
         appleRedirectURI: appleClientId ? host : '',
       } satisfies NonNullable<SdkConfig['wallet']>['embedded'])
     : undefined;
 
   const config = {
-    projectId: import.meta.env.VITE_SEQUENCE_PROJECT_ID!,
-    projectAccessKey: import.meta.env.VITE_SEQUENCE_ACCESS_KEY!,
+    projectId,
+    projectAccessKey,
     wallet: {
-      walletConnectProjectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID,
+      walletConnectProjectId: walletConnectId,
       embedded,
     },
   } satisfies SdkConfig;
-  
+
+  return config;
+}
+```
+
+```ts nextjs client side rendering
+import type { SdkConfig } from '@0xsequence/marketplace-sdk';
+
+const projectAccessKey = process.env.NEXT_PUBLIC_PROJECT_ACCESS_KEY!;
+const projectId = process.env.NEXT_PUBLIC_PROJECT_ID!;
+const waasConfigKey = process.env.NEXT_PUBLIC_WAAS_CONFIG_KEY!;
+const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+const appleClientId = process.env.NEXT_PUBLIC_APPLE_CLIENT_ID;
+const appleRedirectURI =
+  typeof window !== "undefined" ? `https://${window.location.host}` : "";
+const walletConnectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_ID;
+
+export function getConfig() {
+  const embedded = waasConfigKey
+    ? ({
+        waasConfigKey,
+        googleClientId,
+        appleClientId,
+        appleRedirectURI,
+      } satisfies NonNullable<SdkConfig['wallet']>['embedded'])
+    : undefined;
+
+  const config = {
+    projectId,
+    projectAccessKey,
+    wallet: {
+      walletConnectProjectId: walletConnectId,
+      embedded,
+    },
+  } satisfies SdkConfig;
+
   return config;
 }
 ```
@@ -108,8 +155,11 @@ This setup ensures a seamless integration of the marketplace SDK with server-sid
 #### ssrClient.ts
 
 <CodeGroup>
+```ts vite
+// You can omit this step with VITE
+```
 
-```ts nextjs
+```ts nextjs server side rendering
 import { getConfig } from './config';
 import { createSSRClient } from '@0xsequence/marketplace-sdk/react/ssr';
 import { QueryClient } from '@tanstack/react-query';
@@ -126,8 +176,8 @@ export const ssrClient = async () => {
 };
 ```
 
-```ts vite
-// You can omit this step with VITE
+```ts nextjs client side rendering
+// You can omit this step in NEXT.js if your layout uses 'use client' instead of server-side rendering
 ```
 
 </CodeGroup>
@@ -136,33 +186,19 @@ export const ssrClient = async () => {
 
 <Step title="Add the Marketplace SDK Providers Alongside Your Web SDK Providers">
 
-Open your `Providers.tsx` file, where the Web SDK is configured, and integrate the Marketplace SDK providers. Additionally, replace the existing `createWagmiConfig` setup with the updated configuration provided below.
+Open your `Providers.tsx` file, where the Web SDK is configured, and integrate the Marketplace SDK providers.
 
-```ts
+<CodeGroup>
+```ts vite
 import {
   MarketplaceProvider,
   ModalProvider,
-  createWagmiConfig,
-  marketplaceConfigOptions,
 } from "@0xsequence/marketplace-sdk/react";
+import { getConfig } from "./config";
+
+const sdkConfig = getConfig();
 
 // Into your React component:
-
-const { data: marketplaceConfig } = useQuery(
-  marketplaceConfigOptions(sdkConfig),
-  queryClient
-);
-
-if (!marketplaceConfig) {
-  return null;
-}
-
-// If you already have this configuration from Web SDK please replace it for this new config
-const wagmiConfig: Config = createWagmiConfig(
-  marketplaceConfig,
-  sdkConfig,
-  !!sdkInitialState
-);
 
 return (
   /* Your other providers should be placed here (they should wrap MarketplaceProvider) */
@@ -175,6 +211,62 @@ return (
   /* Your other providers should close here */
 );
 ```
+
+```ts nextjs server side rendering
+import {
+  MarketplaceProvider,
+  ModalProvider,
+  marketplaceConfigOptions,
+} from "@0xsequence/marketplace-sdk/react";
+
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from '@tanstack/react-query';
+
+import { ssrClient } from '../ssrClient.ts';
+
+// Into your React component:
+
+const { getInitialState, config: sdkConfig } = ssrClient();
+const sdkInitialState = await getInitialState();
+
+return (
+  /* Your other providers should be placed here (they should wrap MarketplaceProvider) */
+  
+  <MarketplaceProvider config={sdkConfig} sdkInitialState={sdkInitialState}>
+    {children}
+    <ModalProvider />
+  </MarketplaceProvider>
+
+  /* Your other providers should close here */
+);
+```
+
+```ts nextjs client side rendering
+import {
+  MarketplaceProvider,
+  ModalProvider,
+} from "@0xsequence/marketplace-sdk/react";
+import { getConfig } from "./config";
+
+const sdkConfig = getConfig();
+
+// Into your React component:
+
+return (
+  /* Your other providers should be placed here (they should wrap MarketplaceProvider) */
+  
+  <MarketplaceProvider config={sdkConfig}>
+    {children}
+    <ModalProvider />
+  </MarketplaceProvider>
+
+  /* Your other providers should close here */
+);
+```
+</CodeGroup>
 
 </Step>
 
