@@ -204,6 +204,21 @@
             ]
           },
           {
+            "group": "Marketplace SDK",
+            "pages": [
+              "sdk/marketplace-sdk/overview",
+              "sdk/marketplace-sdk/getting-started",
+              {
+                "group": "Hooks",
+                "pages": [
+                  "sdk/marketplace-sdk/hooks/overview",
+                  "sdk/marketplace-sdk/hooks/use-list-collectibles",
+                  "sdk/marketplace-sdk/hooks/marketplace-actions"
+                ]
+              }
+            ]
+          },
+          {
             "group": "Game Engine",
             "pages": [
               {
